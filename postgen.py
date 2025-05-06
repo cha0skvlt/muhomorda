@@ -1,7 +1,16 @@
 import random
 from datetime import datetime
+from parser import extract_text
+from openai import OpenAI
+import os
+from dotenv import load_dotenv
 
-# Список тем (можно позже грузить из PDF или базы)
+# ───── Load API key
+load_dotenv()
+OPENAI_KEY = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=OPENAI_KEY)
+
+# ───── Примитивный список тем
 TOPICS = [
     "🟥 Мухомор и микродозинг",
     "🟫 Чага: гриб бессмертия",
@@ -10,7 +19,7 @@ TOPICS = [
     "🍄 Мифология и духи грибов"
 ]
 
-# Генератор поста
+# ───── Посты по шаблонам
 def generate_post():
     topic = random.choice(TOPICS)
 
@@ -45,5 +54,31 @@ def generate_post():
     return {
         "title": topic,
         "content": body[topic],
+        "created_at": datetime.now().isoformat()
+    }
+
+# ───── Посты из PDF через GPT
+def generate_from_pdf():
+    raw_text = extract_text()[:3000]
+    prompt = (
+        f"Вот выдержка из текста о микродозинге:\n\n{raw_text}\n\n"
+        "На основе этого напиши вдохновляющий Telegram-пост про грибы. "
+        "Добавь заголовок, эмодзи, хештеги. Пост должен быть коротким, поэтичным, мистическим, но понятным."
+    )
+
+    response = client.chat.completions.create(
+        model="gpt-4-turbo",
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=400,
+        temperature=0.8,
+    )
+
+    content = response.choices[0].message.content.strip()
+    title = content.split("\n")[0]
+    body = "\n".join(content.split("\n")[1:])
+
+    return {
+        "title": title,
+        "content": body,
         "created_at": datetime.now().isoformat()
     }
