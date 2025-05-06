@@ -18,6 +18,7 @@ FILES: |
     ├── bot.py             # Главный скрипт: генерация и отправка
     ├── db.py              # Работа с SQLite
     ├── parser.py          # Парсинг mikrodozing.pdf
+    ├── postgen.py         # Генерация постов
     ├── scheduler.py       # Планировщик для crontab
     ├── persona.yml        # Личность бота
     ├── posts.json         # Исторические сгенерированные посты

@@ -3,12 +3,13 @@ import yaml
 import telebot
 from openai import OpenAI
 from dotenv import load_dotenv
+from postgen import generate_post
 
 # ───── Load .env
 load_dotenv()
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 OPENAI_KEY = os.getenv("OPENAI_API_KEY")
-ALLOWED_USERS = os.getenv("ALLOWED_USERS", "").split(",")
+ALLOWED_USERS = set(map(str.strip, os.getenv("ALLOWED_USERS", "").split(",")))
 
 # ───── Load persona.yml
 with open("persona.yml", "r", encoding="utf-8") as f:
@@ -27,7 +28,7 @@ bot = telebot.TeleBot(TELEGRAM_TOKEN)
 client = OpenAI(api_key=OPENAI_KEY)
 sessions = {}
 
-# ───── Commands
+# ───── Команды
 @bot.message_handler(commands=['version'])
 def version(message):
     user_id = str(message.from_user.id)
@@ -44,9 +45,27 @@ def reset_session(message):
     if user_id not in ALLOWED_USERS:
         return
     sessions[user_id] = []
-    bot.reply_to(message, "♻️ Context reset.")
+    bot.reply_to(message, "♻️ Контекст сброшен.")
 
-# ───── Messages
+@bot.message_handler(commands=['help'])
+def help_cmd(message):
+    bot.reply_to(message,
+        "/version – параметры модели\n"
+        "/reset – сброс контекста\n"
+        "/post – грибной пост 🍄\n"
+        "/help – помощь"
+    )
+
+@bot.message_handler(commands=['post'])
+def send_post(message):
+    user_id = str(message.from_user.id)
+    if user_id not in ALLOWED_USERS:
+        return
+    post = generate_post()
+    text = f"*{post['title']}*\n\n{post['content']}"
+    bot.send_message(message.chat.id, text, parse_mode="Markdown")
+
+# ───── Основная логика общения
 @bot.message_handler(func=lambda m: True)
 def handle_message(message):
     user_id = str(message.from_user.id)
@@ -75,5 +94,5 @@ def handle_message(message):
     except Exception as e:
         bot.reply_to(message, f"⚠️ Error: {e}")
 
-# ───── Start
+# ───── Запуск
 bot.infinity_polling()
