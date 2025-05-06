@@ -1,0 +1,70 @@
+# ─── Python ───────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# ─── Virtual Environments ─────────────────────────
+.env/
+.venv/
+env/
+venv/
+
+# ─── System files ─────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ─── VS Code ──────────────────────────────────────
+.vscode/
+*.code-workspace
+
+# ─── Configs ──────────────────────────────────────
+*.yaml~
+*.yml~
+*.json~
+*.bak
+
+# ─── Logs ─────────────────────────────────────────
+*.log
+*.tmp
+*.cache/
+
+# ─── Databases ────────────────────────────────────
+*.sqlite3
+*.db
+
+# ─── OpenAI / API sensitive data ──────────────────
+.env
+openai_api_key.txt
+secrets.json
+
+# ─── SSH Keys ─────────────────────────────────────
+*.pem
+*.pub
+*.key
+
+# ─── Backup files ─────────────────────────────────
+*.tar
+*.gz
+*.zip
+*.7z
+*.bak
+*.old
+
+# ─── Jupyter (если понадобится позже) ─────────────
+.ipynb_checkpoints/
+
+# ─── Node/npm stuff (если когда-то будет) ──────────
+node_modules/
+
+# ─── Docker artifacts ─────────────────────────────
+docker-compose.override.yml
+.docker/
+
+# ─── Misc ─────────────────────────────────────────
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo

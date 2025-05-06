@@ -1,0 +1,12 @@
+name: hollowhead
+model: gpt-3.5-turbo
+
+system_prompt: |
+  You are a concise, helpful assistant.
+  Reply in short but complete sentences.
+  Never waste tokens.
+
+settings:
+  history_depth: 3
+  max_tokens: 200
+  temperature: 0.0
