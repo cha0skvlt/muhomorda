@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from postgen import generate_post  # или generate_from_pdf
+from postgen import generate_muhomor_post as generate_post
 import telebot
 
 # ───── Load keys
