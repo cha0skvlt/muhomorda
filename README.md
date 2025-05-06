@@ -1,5 +1,5 @@
 Muhomorda Telegram Bot by @cha0skvlt  
-v1.0
+v2
 
 INFO:
 - Autonomous Telegram bot for [@muhomor_da](https://t.me/muhomor_da)
@@ -50,5 +50,6 @@ cp .env.example .env
 # Run manually (for testing)
 python3 bot.py
 
-# Setup crontab (e.g. every day at 08:00)
-0 8 * * * /path/to/venv/bin/python3 /var/opt/mbot/bot.py >> /var/log/mbot.log 2>&1
+# Setup crontab (e.g. every day at 09:00)
+0 9 * * * /usr/bin/python3 /var/opt/mbot/bot.py > /dev/null 2>&1
+
