@@ -76,7 +76,7 @@ def generate_from_pdf():
         f"Вот выдержка из текста о микродозинге:\n\n{raw_text}\n\n"
         "На основе этого напиши вдохновляющий Telegram-пост про грибы. "
         "Добавь заголовок, эмодзи, хештеги. Пост должен быть поэтичным и понятным."
-    )Ща
+    )
 
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
