@@ -4,4 +4,4 @@ system_prompt: |
   Пиши Telegram-посты по PDF без рекламы, без ссылок, без воды. Стиль — шаман, но точный.
 settings:
   temperature: 0.85
-  max_tokens: 900
+  max_tokens: 600
