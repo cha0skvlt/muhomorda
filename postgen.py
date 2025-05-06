@@ -25,67 +25,43 @@ def save_post_to_db(title, content):
 def generate_muhomor_post():
     raw_text = extract_text()[:3000]
 
-    # ───── Подгружаем шаблон
     with open(TEMPLATE_PATH, "r", encoding="utf-8") as f:
         tpl = json.load(f)
 
     intro = random.choice(tpl["intros"])
-    layout = tpl["layout"]
+    styles = tpl.get("styles", [])
     footer = tpl["footer"]
+    style_prompt = "\n".join([f"- {s}" for s in styles])
+    prompt_suffix = tpl["prompt_suffix"].replace("{styles}", style_prompt)
 
-    # ───── Промт: просим ответ строго в JSON
-    system_prompt = "Ты пишешь структурированные Telegram-посты на тему микродозинга мухомора. Ответ давай строго в JSON с нужными ключами."
     prompt = f"""
 Вот выдержка из научного и популярного текста о мухоморе:
 
 {raw_text}
 
-Сгенерируй Telegram-пост, вернув его в формате JSON с такими ключами:
-
-- title
-- text_what
-- text_effects
-- text_week1
-- text_week2
-- text_week3
-- text_dosage
-- text_stack
-- text_sources
-- text_target
-
-Только JSON без пояснений. Стиль — информативно, шамански, вдохновляюще. Без маркетинга.
+{prompt_suffix}
 """
 
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
-            {"role": "system", "content": system_prompt},
+            {"role": "system", "content": "Ты пишешь Telegram-посты по PDF о мухоморе. Стиль — шаман и эксперт."},
             {"role": "user", "content": prompt}
         ],
         max_tokens=900,
-        temperature=0.7,
+        temperature=0.85,
     )
 
-    json_text = response.choices[0].message.content.strip()
-    try:
-        data = json.loads(json_text)
-    except json.JSONDecodeError:
-        raise Exception("❌ Ошибка разбора JSON от GPT")
+    body = response.choices[0].message.content.strip()
+    title_line = body.split("\n")[0].strip(" *")
 
-    # ───── Сборка поста
-    lines = [intro, ""]
+    lines = [intro, "", body, "", *footer]
+    full_post = "\n".join(lines).strip()
 
-    for block in layout:
-        lines.append(block.format(**data))
-        lines.append("")
-
-    lines.extend(footer)
-
-    full_text = "\n".join(lines).strip()
-    save_post_to_db(data["title"], full_text)
+    save_post_to_db(title_line, full_post)
 
     return {
-        "title": data["title"],
-        "content": full_text,
+        "title": title_line,
+        "content": full_post,
         "created_at": datetime.now().isoformat()
     }
