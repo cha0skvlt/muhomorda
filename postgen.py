@@ -1,17 +1,20 @@
 import os
-from datetime import datetime
-from parser import extract_text
-from openai import OpenAI
-from dotenv import load_dotenv
+import json
+import random
 import sqlite3
+from datetime import datetime
+from dotenv import load_dotenv
+from openai import OpenAI
+from parser import extract_text
 
 # ───── Init
 load_dotenv()
 OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 DB_PATH = "mukhomorda.db"
+TEMPLATE_PATH = "post.json"
+
 client = OpenAI(api_key=OPENAI_KEY)
 
-# ───── Сохраняем пост
 def save_post_to_db(title, content):
     with sqlite3.connect(DB_PATH) as conn:
         cur = conn.cursor()
@@ -19,54 +22,70 @@ def save_post_to_db(title, content):
         conn.commit()
         print(f"[DB] Сохранён пост: {title}")
 
-# ───── Генерация по PDF (только мухомор)
 def generate_muhomor_post():
-    raw_text = extract_text()[:3000]  # Ограничим контекст
+    raw_text = extract_text()[:3000]
+
+    # ───── Подгружаем шаблон
+    with open(TEMPLATE_PATH, "r", encoding="utf-8") as f:
+        tpl = json.load(f)
+
+    intro = random.choice(tpl["intros"])
+    layout = tpl["layout"]
+    footer = tpl["footer"]
+
+    # ───── Промт: просим ответ строго в JSON
+    system_prompt = "Ты пишешь структурированные Telegram-посты на тему микродозинга мухомора. Ответ давай строго в JSON с нужными ключами."
     prompt = f"""
-Вот выдержка из научно-популярного текста о микродозинге мухомора:
+Вот выдержка из научного и популярного текста о мухоморе:
 
 {raw_text}
 
-На основе этих данных, сгенерируй красиво оформленный Telegram-пост о микродозинге мухомора в структуре:
+Сгенерируй Telegram-пост, вернув его в формате JSON с такими ключами:
 
-🧠 Краткое название и идея  
-🍄 Что это (о мухоморе)  
-🔬 Подтверждённые эффекты  
-📊 Влияние по неделям (1–6)  
-💊 Как принимать (дозировки, курс)  
-⚙️ С чем сочетается (чага, родиола, etc)  
-📚 Научные источники  
-🧩 Кому подойдёт  
+- title
+- text_what
+- text_effects
+- text_week1
+- text_week2
+- text_week3
+- text_dosage
+- text_stack
+- text_sources
+- text_target
 
-Добавь эмодзи, буллеты, структурирование. Не используй маркетинговые слова, ссылки или "пиши сюда".  
-Пиши как лесной шаман, но грамотно.
+Только JSON без пояснений. Стиль — информативно, шамански, вдохновляюще. Без маркетинга.
 """
 
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=700,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=900,
         temperature=0.7,
     )
 
-    content = response.choices[0].message.content.strip()
-    title = content.split("\n")[0].strip()
-    body = "\n".join(content.split("\n")[1:]).strip()
+    json_text = response.choices[0].message.content.strip()
+    try:
+        data = json.loads(json_text)
+    except json.JSONDecodeError:
+        raise Exception("❌ Ошибка разбора JSON от GPT")
 
-    # ───── Добавим блок ссылок
-    links_block = """
-📱 Для заказа писать сюда
-(https://t.me/NitrousIgor)
-💬 Чат единомышленников (https://t.me/muhomordachat)
-🍄 О нашей лавке (https://telegra.ph/Muhomor-DA-12-30)
-""".strip()
+    # ───── Сборка поста
+    lines = [intro, ""]
 
-    full_content = f"{body}\n\n{links_block}"
+    for block in layout:
+        lines.append(block.format(**data))
+        lines.append("")
 
-    save_post_to_db(title, full_content)
+    lines.extend(footer)
+
+    full_text = "\n".join(lines).strip()
+    save_post_to_db(data["title"], full_text)
 
     return {
-        "title": title,
-        "content": full_content,
+        "title": data["title"],
+        "content": full_text,
         "created_at": datetime.now().isoformat()
     }

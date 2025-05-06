@@ -1,98 +1,91 @@
 import os
-import yaml
-import telebot
-from openai import OpenAI
+import json
+import random
+import sqlite3
+from datetime import datetime
 from dotenv import load_dotenv
-from postgen import generate_post
-
-# ───── Load .env
-load_dotenv()
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-OPENAI_KEY = os.getenv("OPENAI_API_KEY")
-ALLOWED_USERS = set(map(str.strip, os.getenv("ALLOWED_USERS", "").split(",")))
-
-# ───── Load persona.yml
-with open("persona.yml", "r", encoding="utf-8") as f:
-    persona = yaml.safe_load(f)
-
-OPENAI_MODEL = persona.get("model", "gpt-3.5-turbo")
-SYSTEM_PROMPT = persona.get("system_prompt", "")
-
-settings = persona.get("settings", {})
-HISTORY_DEPTH = int(settings.get("history_depth", 3))
-MAX_TOKENS = int(settings.get("max_tokens", 200))
-TEMPERATURE = float(settings.get("temperature", 0.5))
+from openai import OpenAI
+from parser import extract_text
 
 # ───── Init
-bot = telebot.TeleBot(TELEGRAM_TOKEN)
+load_dotenv()
+OPENAI_KEY = os.getenv("OPENAI_API_KEY")
+DB_PATH = "mukhomorda.db"
+TEMPLATE_PATH = "post.json"
+
 client = OpenAI(api_key=OPENAI_KEY)
-sessions = {}
 
-# ───── Команды
-@bot.message_handler(commands=['version'])
-def version(message):
-    user_id = str(message.from_user.id)
-    if user_id not in ALLOWED_USERS:
-        return
-    bot.reply_to(
-        message,
-        f"✅ Model: {OPENAI_MODEL}, tokens: {MAX_TOKENS}, temp: {TEMPERATURE}, depth: {HISTORY_DEPTH}"
+def save_post_to_db(title, content):
+    with sqlite3.connect(DB_PATH) as conn:
+        cur = conn.cursor()
+        cur.execute("INSERT INTO posts (title, content) VALUES (?, ?)", (title, content))
+        conn.commit()
+        print(f"[DB] Сохранён пост: {title}")
+
+def generate_muhomor_post():
+    raw_text = extract_text()[:3000]
+
+    # ───── Подгружаем шаблон
+    with open(TEMPLATE_PATH, "r", encoding="utf-8") as f:
+        tpl = json.load(f)
+
+    intro = random.choice(tpl["intros"])
+    layout = tpl["layout"]
+    footer = tpl["footer"]
+
+    # ───── Промт: просим ответ строго в JSON
+    system_prompt = "Ты пишешь структурированные Telegram-посты на тему микродозинга мухомора. Ответ давай строго в JSON с нужными ключами."
+    prompt = f"""
+Вот выдержка из научного и популярного текста о мухоморе:
+
+{raw_text}
+
+Сгенерируй Telegram-пост, вернув его в формате JSON с такими ключами:
+
+- title
+- text_what
+- text_effects
+- text_week1
+- text_week2
+- text_week3
+- text_dosage
+- text_stack
+- text_sources
+- text_target
+
+Только JSON без пояснений. Стиль — информативно, шамански, вдохновляюще. Без маркетинга.
+"""
+
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=900,
+        temperature=0.7,
     )
 
-@bot.message_handler(commands=['reset'])
-def reset_session(message):
-    user_id = str(message.from_user.id)
-    if user_id not in ALLOWED_USERS:
-        return
-    sessions[user_id] = []
-    bot.reply_to(message, "♻️ Контекст сброшен.")
-
-@bot.message_handler(commands=['help'])
-def help_cmd(message):
-    bot.reply_to(message,
-        "/version – параметры модели\n"
-        "/reset – сброс контекста\n"
-        "/post – грибной пост 🍄\n"
-        "/help – помощь"
-    )
-
-@bot.message_handler(commands=['post'])
-def send_post(message):
-    user_id = str(message.from_user.id)
-    if user_id not in ALLOWED_USERS:
-        return
-    post = generate_post()
-    text = f"*{post['title']}*\n\n{post['content']}"
-    bot.send_message(message.chat.id, text, parse_mode="Markdown")
-
-# ───── Основная логика общения
-@bot.message_handler(func=lambda m: True)
-def handle_message(message):
-    user_id = str(message.from_user.id)
-    if user_id not in ALLOWED_USERS:
-        bot.reply_to(message, "⛔ Access denied.")
-        return
-
-    bot.send_chat_action(message.chat.id, "typing")
-    sessions.setdefault(user_id, [])
-    sessions[user_id].append({"role": "user", "content": message.text})
-
+    json_text = response.choices[0].message.content.strip()
     try:
-        chat_messages = [{"role": "system", "content": SYSTEM_PROMPT}] + sessions[user_id][-HISTORY_DEPTH:]
+        data = json.loads(json_text)
+    except json.JSONDecodeError:
+        raise Exception("❌ Ошибка разбора JSON от GPT")
 
-        response = client.chat.completions.create(
-            model=OPENAI_MODEL,
-            messages=chat_messages,
-            temperature=TEMPERATURE,
-            max_tokens=MAX_TOKENS
-        )
+    # ───── Сборка поста
+    lines = [intro, ""]
 
-        reply = response.choices[0].message.content.strip()
-        sessions[user_id].append({"role": "assistant", "content": reply})
-        bot.reply_to(message, reply)
+    for block in layout:
+        lines.append(block.format(**data))
+        lines.append("")
 
-    except Exception as e:
-        bot.reply_to(message, f"⚠️ Error: {e}")
+    lines.extend(footer)
 
-# ───── Запуск
-bot.infinity_polling()
+    full_text = "\n".join(lines).strip()
+    save_post_to_db(data["title"], full_text)
+
+    return {
+        "title": data["title"],
+        "content": full_text,
+        "created_at": datetime.now().isoformat()
+    }
