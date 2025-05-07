@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 from dotenv import load_dotenv
 import telebot
 from postgen import generate_muhomor_post
