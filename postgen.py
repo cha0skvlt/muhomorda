@@ -1,10 +1,16 @@
+#!/usr/bin/env python3
+
+import os
 import json
+import random
 import yaml
+from dotenv import load_dotenv
 from openai import OpenAI
 from parser import extract_random_text
-import random
 
-client = OpenAI()
+# ───── Init
+load_dotenv()
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 PDF_PATH = "data/mikrodozing.pdf"
 TEMPLATE_PATH = "post.json"
@@ -29,7 +35,6 @@ def generate_muhomor_post():
     theme = random.choice(tpl["themes"])
     footer = "\n\n" + "\n".join(tpl["footer"])
 
-    # Используем PDF только если тема — цитаты из книги
     if "Цитаты" in theme or "Бабы Маши" in theme:
         raw_text = extract_random_text(PDF_PATH)
         text_block = f"Вот выдержка из книги Бабы Маши:\n\"\"\"{raw_text}\"\"\"\n\n"
