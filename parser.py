@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import fitz  # PyMuPDF
 
 def extract_text(pdf_path="data/mikrodozing.pdf"):
