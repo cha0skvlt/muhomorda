@@ -1,5 +1,5 @@
 # 🍄 Muhomorda Telegram Bot by @cha0skvlt  
-**Version: v2**
+**Version: v2.5**
 
 ## INFO
 - 🤖 Telegram bot for [@muhomor_da](https://t.me/muhomor_da)
