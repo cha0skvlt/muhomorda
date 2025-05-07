@@ -1,55 +1,48 @@
-Muhomorda Telegram Bot by @cha0skvlt  
-v2
+# 🍄 Muhomorda Telegram Bot by @cha0skvlt  
+**Version: v2**
 
-INFO:
-- Autonomous Telegram bot for [@muhomor_da](https://t.me/muhomor_da)
-- Posts daily about Amanita microdosing 🍄
-- Source: `data/mikrodozing.pdf` — knowledge of Baba Masha 🧙‍♀️
-- Style, structure, and tone controlled via `post.json` and `persona.yml`
-- Powered by GPT-3.5-turbo and SQLite
-- Fully automatic: runs once a day via `cron`, no commands or interaction
+## INFO
+- 🤖 Telegram bot for [@muhomor_da](https://t.me/muhomor_da)
+- 🧙‍♀️ Posts daily about Amanita and other mushrooms microdosing, based on the teachings of Baba Masha
+- 📄 Uses `data/mikrodozing.pdf` for inspiration every few days
+- ✨ Style, structure, themes and footer managed via `post.json` and `persona.yml`
+- ⚙️ Powered by GPT-3.5-turbo (OpenAI) + SQLite for history
+- 🕒 No interaction, no commands — runs silently via `cron`
 
-DONE:
-- ✅ Auto-posting bot via `bot.py` (no handlers, only scheduled run)
-- ✅ PDF text extraction
-- ✅ Semantic GPT-based post generation
-- ✅ Markdown + emoji formatting via `post.json`
-- ✅ Persona config (style, model) in `persona.yml`
-- ✅ SQLite post archive (`mukhomorda.db`)
-- ✅ Crontab-compatible, stable, silent
-
-TODO:
+## TODO
 - [ ] Image generation (optional)
-- [ ] Admin stats / analytics
-- [ ] Support for other mushrooms (Lion’s Mane, Chaga, etc.)
-- [ ] Telegram inline previews / previews queue
+- [ ] Admin dashboard or stats
+- [ ] Inline preview queue for approval
 
-FILES:
-- `.env`              — API tokens, allowed users, channel ID
-- `bot.py`            — main entry point, run by cron
-- `postgen.py`        — generates post using GPT + formatting
-- `parser.py`         — extracts raw text from PDF
-- `persona.yml`       — defines GPT model and tone
-- `post.json`         — structure, intros, styles, and footer
-- `mukhomorda.db`     — SQLite database for post history
-- `requirements.txt`  — Python dependencies
-- `README.md`         — project documentation
 
-HOW TO USE:
+## FILES
+| File            | Description                              |
+|-----------------|------------------------------------------|
+| `.env`          | API keys and bot/channel configuration   |
+| `bot.py`        | Main cron-run script (silent mode)       |
+| `postgen.py`    | GPT-based post generation logic          |
+| `parser.py`     | Extracts random text from Baba Masha PDF |
+| `persona.yml`   | Persona, tone, temperature, prompt       |
+| `post.json`     | Themes, footer, quote intro template     |
+| `mukhomorda.db` | SQLite DB for published post history     |
+| `requirements.txt` | Python dependencies                   |
+| `README.md`     | You're reading it                        |
+
+## HOW TO USE
+
 ```bash
 # Install dependencies
 pip install -r requirements.txt
 
-# Configure environment
+# Prepare environment
 cp .env.example .env
-# Fill in:
-# - TELEGRAM_BOT_TOKEN=
-# - OPENAI_API_KEY=
-# - TELEGRAM_CHANNEL_ID=@yourchannel or -100XXXXXXXXXX
+# Then edit .env:
+# TELEGRAM_BOT_TOKEN=xxxxx
+# OPENAI_API_KEY=xxxxx
+# TELEGRAM_CHANNEL_ID=@yourchannel or -100XXXXXXXXXX
 
-# Run manually (for testing)
+# Run manually (for debug)
 python3 bot.py
 
-# Setup crontab (e.g. every day at 09:00)
-0 9 * * * /usr/bin/python3 /var/opt/mbot/bot.py > /dev/null 2>&1
-
+# Setup cron (recommended time: 08:00 with delay logic)
+0 8 * * * /usr/bin/python3 /var/opt/mbot/bot.py > /dev/null 2>&1
