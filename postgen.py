@@ -4,6 +4,7 @@ import os
 import json
 import random
 import yaml
+import re
 from dotenv import load_dotenv
 from openai import OpenAI
 from parser import extract_random_text
@@ -27,6 +28,12 @@ def load_persona():
         "max_tokens": p["settings"].get("max_tokens", 600)
     }
 
+def finalize_content(text):
+    sentences = re.split(r'(?<=[.!?…]) +', text.strip())
+    if len(sentences) > 1:
+        return " ".join(sentences[:-1])
+    return text.strip()
+
 def generate_muhomor_post():
     with open(TEMPLATE_PATH, "r", encoding="utf-8") as f:
         tpl = json.load(f)
@@ -34,12 +41,12 @@ def generate_muhomor_post():
 
     theme = random.choice(tpl["themes"])
     footer = "\n\n" + "\n".join(tpl["footer"])
+    quote_intro = tpl.get("quote_intro", "")
 
+    text_block = ""
     if "Цитаты" in theme or "Бабы Маши" in theme:
         raw_text = extract_random_text(PDF_PATH)
-        text_block = f"Вот выдержка из книги Бабы Маши:\n\"\"\"{raw_text}\"\"\"\n\n"
-    else:
-        text_block = ""
+        text_block = quote_intro.replace("{text}", raw_text)
 
     prompt = persona["user_prompt"].replace("{theme}", theme)
     final_prompt = text_block + prompt
@@ -54,7 +61,9 @@ def generate_muhomor_post():
         max_tokens=persona["max_tokens"]
     )
 
-    content = response.choices[0].message.content.strip()
+    raw = response.choices[0].message.content.strip()
+    content = finalize_content(raw)
+
     return {
         "title": theme,
         "content": f"{content}{footer}"
