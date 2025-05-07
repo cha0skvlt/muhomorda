@@ -1,67 +1,47 @@
-import os
-import json
 import random
-import sqlite3
-from datetime import datetime
-from dotenv import load_dotenv
+import json
+from pathlib import Path
 from openai import OpenAI
-from parser import extract_text
+from parser import extract_random_text
 
-# ───── Init
-load_dotenv()
-OPENAI_KEY = os.getenv("OPENAI_API_KEY")
-DB_PATH = "mukhomorda.db"
 TEMPLATE_PATH = "post.json"
+PDF_PATH = "data/mikrodozing.pdf"
 
-client = OpenAI(api_key=OPENAI_KEY)
-
-def save_post_to_db(title, content):
-    with sqlite3.connect(DB_PATH) as conn:
-        cur = conn.cursor()
-        cur.execute("INSERT INTO posts (title, content) VALUES (?, ?)", (title, content))
-        conn.commit()
-        print(f"[DB] Сохранён пост: {title}")
+client = OpenAI()
 
 def generate_muhomor_post():
-    raw_text = extract_text()[:3000]
-
     with open(TEMPLATE_PATH, "r", encoding="utf-8") as f:
         tpl = json.load(f)
 
     intro = random.choice(tpl["intros"])
-    styles = tpl.get("styles", [])
-    footer = tpl["footer"]
-    style_prompt = "\n".join([f"- {s}" for s in styles])
-    prompt_suffix = tpl["prompt_suffix"].replace("{styles}", style_prompt)
+    style = random.choice(tpl["styles"])
+    theme = random.choice(tpl["themes"])
+    footer = "\n\n" + "\n".join(tpl["footer"])
+    system_prompt = tpl["system_prompt"]
+
+    raw_text = extract_random_text(PDF_PATH)
 
     prompt = f"""
-Вот выдержка из научного и популярного текста о мухоморе:
+{system_prompt}
 
-{raw_text}
+Вот выдержка из текста:
+\"\"\"{raw_text}\"\"\"
 
-{prompt_suffix}
+Тема поста: {theme}  
+Стиль подачи: {style}
+
+Сгенерируй Telegram-пост в соответствии с описанием. Используй эмодзи, структуру и голос шаманского духа Мухоморды. Не используй хэштеги, ссылки и рекламу.
 """
 
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "Ты пишешь Telegram-посты по PDF о мухоморе. Стиль — шаман и эксперт."},
-            {"role": "user", "content": prompt}
-        ],
-        max_tokens=900,
-        temperature=0.85,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.8,
+        max_tokens=700
     )
 
-    body = response.choices[0].message.content.strip()
-    title_line = body.split("\n")[0].strip(" *")
-
-    lines = [intro, "", body, "", *footer]
-    full_post = "\n".join(lines).strip()
-
-    save_post_to_db(title_line, full_post)
-
+    content = response.choices[0].message.content.strip()
     return {
-        "title": title_line,
-        "content": full_post,
-        "created_at": datetime.now().isoformat()
+        "title": f"{intro}",
+        "content": f"{intro}\n\n{content}{footer}"
     }
